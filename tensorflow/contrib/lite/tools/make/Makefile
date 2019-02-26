@@ -72,6 +72,14 @@ BENCHMARK_BINARY_NAME := benchmark_model
 MINIMAL_SRCS := \
 tensorflow/contrib/lite/examples/minimal/minimal.cc
 
+LABEL_IMAGE_SRCS := \
+tensorflow/contrib/lite/examples/label_image/label_image.cc \
+tensorflow/contrib/lite/examples/label_image/bitmap_helpers.cc
+
+SEQ_INFERENCE_SRCS := \
+tensorflow/contrib/lite/examples/seq_inference/seq_inference.cc \
+tensorflow/contrib/lite/examples/seq_inference/featurevec_helpers.cc
+
 # What sources we want to compile, must be kept in sync with the main Bazel
 # build files.
 
@@ -108,7 +116,9 @@ $(wildcard tensorflow/contrib/lite/*/*test.cc) \
 $(wildcard tensorflow/contrib/lite/*/*/*test.cc) \
 $(wildcard tensorflow/contrib/lite/*/*/*/*test.cc) \
 $(wildcard tensorflow/contrib/lite/kernels/test_util.cc) \
-$(MINIMAL_SRCS)
+$(MINIMAL_SRCS) \
+$(LABEL_IMAGE_SRCS) \
+$(SEQ_INFERENCE_SRCS)
 ifeq ($(BUILD_TYPE),micro)
 CORE_CC_EXCLUDE_SRCS += \
 tensorflow/contrib/lite/mmap_allocation.cc \
@@ -135,6 +145,8 @@ include $(wildcard $(MAKEFILE_DIR)/targets/*_makefile.inc)
 
 ALL_SRCS := \
 	$(MINIMAL_SRCS) \
+	$(LABEL_IMAGE_SRCS) \
+	$(SEQ_INFERENCE_SRCS) \
 	$(PROFILER_SRCS) \
 	$(PROFILER_SUMMARY_SRCS) \
 	$(TF_LITE_CC_SRCS) \
@@ -150,6 +162,8 @@ LIB_PATH := $(LIBDIR)$(LIB_NAME)
 BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
 BENCHMARK_BINARY := $(BINDIR)$(BENCHMARK_BINARY_NAME)
 MINIMAL_BINARY := $(BINDIR)minimal
+LABEL_IMAGE_BINARY := $(BINDIR)label_image
+SEQ_INFERENCE_BINARY := $(BINDIR)seq_inference
 
 CXX := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}g++
 CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
@@ -157,6 +171,12 @@ AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 
 MINIMAL_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(MINIMAL_SRCS))))
+
+LABEL_IMAGE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LABEL_IMAGE_SRCS))))
+
+SEQ_INFERENCE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SEQ_INFERENCE_SRCS))))
 
 LIB_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(TF_LITE_CC_SRCS))))
@@ -174,7 +194,7 @@ $(OBJDIR)%.o: %.c
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
 # The target that's compiled if there's no command-line arguments.
-all: $(LIB_PATH)  $(MINIMAL_BINARY) $(BENCHMARK_BINARY)
+all: $(LIB_PATH)  $(MINIMAL_BINARY) $(LABEL_IMAGE_BINARY) $(SEQ_INFERENCE_BINARY) $(BENCHMARK_BINARY)
 
 # The target that's compiled for micro-controllers
 micro: $(LIB_PATH)
@@ -192,6 +212,18 @@ $(MINIMAL_BINARY): $(MINIMAL_OBJS) $(LIB_PATH)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) \
 	-o $(MINIMAL_BINARY) $(MINIMAL_OBJS) \
+	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
+
+$(LABEL_IMAGE_BINARY): $(LABEL_IMAGE_OBJS) $(LIB_PATH)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) \
+	-o $(LABEL_IMAGE_BINARY) $(LABEL_IMAGE_OBJS) \
+	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
+
+$(SEQ_INFERENCE_BINARY): $(SEQ_INFERENCE_OBJS) $(LIB_PATH)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) \
+	-o $(SEQ_INFERENCE_BINARY) $(SEQ_INFERENCE_OBJS) \
 	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
 
 $(BENCHMARK_LIB) : $(LIB_PATH) $(BENCHMARK_OBJS)
