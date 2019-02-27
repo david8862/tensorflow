@@ -18,6 +18,7 @@ limitations under the License.
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <string>
 
 #include <unistd.h>  // NOLINT(build/include_order)
 
@@ -28,37 +29,36 @@ limitations under the License.
 namespace tflite {
 namespace seq_inference {
 
-std::vector<double> read_featurevec(const std::string& input_npy_name, int width,
-                              int height, Settings* s)
+std::vector<double> read_featurevec(const std::string& featurevec_name, int* width,
+                              int* height, Settings* s)
 {
-    t_npy_header header;
+    string buff;
+    int i = 0;
 
-    std::ifstream file(input_npy_name, std::ios::in | std::ios::binary);
+    std::ifstream file(featurevec_name, std::ios::in);
     if (!file) {
-        LOG(FATAL) << "input file " << input_npy_name << " not found\n";
+        LOG(FATAL) << "input file " << featurevec_name << " not found\n";
         exit(-1);
     }
 
-    // hardcode feature array size
-    int seq_length = height;
-    int feature_length = width;
-    std::vector<double> feature_array(seq_length*feature_length);
+    //get sequence length and feature length from 1st two lines
+    getline(file, buff);
+    *height = atoi(buff.c_str());
+    getline(file, buff);
+    *width = atoi(buff.c_str());
 
-    file.read(reinterpret_cast<char*>(&header), sizeof(t_npy_header));
-    file.seekg(header.header_len, std::ios::cur);
+    std::vector<double> feature_array((*height)*(*width));
 
-    file.read(reinterpret_cast<char*>(feature_array.data()), seq_length*feature_length*sizeof(double));
-
-    //int count = 0;
-    //for (auto item : feature_array) {
-        //if (item == 0)
-            //count ++;
-        //else
-            ////printf("%lf\n", item);
-            //cout << item << endl;
-    //}
-    //printf("%d\n", count);
+    while(getline(file, buff)) {
+        feature_array[i] = atof(buff.c_str());
+        i++;
+        if(i >= (*height)*(*width)) {
+            std::cout << "buffer oversize!" << "\n";
+            break;
+        }
+    }
     return feature_array;
 }
+
 }  // namespace seq_inference
 }  // namespace tflite

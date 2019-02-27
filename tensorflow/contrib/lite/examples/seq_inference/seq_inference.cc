@@ -135,11 +135,11 @@ void RunInference(Settings* s) {
     interpreter->SetNumThreads(s->number_of_threads);
   }
 
-  // hardcode feature array size
+  // presumed feature array size
   int featurevec_width = 1280;
   int featurevec_height = 10;
 
-  std::vector<double> in = read_featurevec(s->input_npy_name, featurevec_width, featurevec_width, s);
+  std::vector<double> in = read_featurevec(s->featurevec_name, &featurevec_width, &featurevec_width, s);
 
   int input = interpreter->inputs()[0];
   if (s->verbose) LOG(INFO) << "input: " << input << "\n";
@@ -163,9 +163,6 @@ void RunInference(Settings* s) {
   TfLiteIntArray* dims = interpreter->tensor(input)->dims;
   int wanted_height = dims->data[1];
   int wanted_width = dims->data[2];
-
-  LOG(FATAL) << "xiaobizh --- height: " << wanted_height << "\n";
-  LOG(FATAL) << "xiaobizh --- width: " << wanted_width << "\n";
 
   //check the hardcoded size with model input
   if (wanted_height != featurevec_height || wanted_width != featurevec_width) {
@@ -263,7 +260,7 @@ void display_usage() {
             << "--count, -c: loop interpreter->Invoke() for certain times\n"
             << "--input_mean, -b: input mean\n"
             << "--input_std, -s: input standard deviation\n"
-            << "--input, -i: featurevec.npy\n"
+            << "--input, -i: featurevec.txt\n"
             << "--labels, -l: labels for the model\n"
             << "--tflite_model, -m: model_name.tflite\n"
             << "--profiling, -p: [0|1], profiling or not\n"
@@ -313,7 +310,7 @@ int Main(int argc, char** argv) {
             strtol(optarg, nullptr, 10);  // NOLINT(runtime/deprecated_fn)
         break;
       case 'i':
-        s.input_npy_name = optarg;
+        s.featurevec_name = optarg;
         break;
       case 'l':
         s.labels_file_name = optarg;

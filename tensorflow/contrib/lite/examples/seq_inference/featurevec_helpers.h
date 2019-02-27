@@ -22,19 +22,10 @@ limitations under the License.
 namespace tflite {
 namespace seq_inference {
 
-#define MAGIC_LEN 6
-
 using namespace std;
 
-typedef struct npy_header {
-    unsigned char magic[MAGIC_LEN];
-    unsigned char major_version;
-    unsigned char minor_version;
-    unsigned short header_len;
-}t_npy_header;
-
-std::vector<double> read_featurevec(const std::string& input_npy_name, int width,
-                              int height, Settings* s);
+std::vector<double> read_featurevec(const std::string& featurevec_name, int* width,
+                              int* height, Settings* s);
 
 template <class T>
 void feed(T* out, double* in, int height, int width, Settings* s);

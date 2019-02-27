@@ -55,17 +55,13 @@ void feed(T* out, double* in, int height, int width, Settings* s) {
   double mean_val = get_mean(in, number_of_input);
   double stddev_val = get_stddev(in, number_of_input);
   double temp = 0;
-  LOG(FATAL) << "xiaobizh --- s->input_floating: " << s->input_floating << "\n";
 
   for (int i = 0; i < number_of_input; i++) {
     if (s->input_floating) {
       out[i] = static_cast<float>(in[i]);
-      //if(i<100 && in[i] != 0) {
-          //LOG(FATAL) << "xiaobizh --- in[" << i << "]: " << in[i] << "\n";
-          //LOG(FATAL) << "xiaobizh --- out[" << i << "]: " << out[i] << "\n";
-      //}
     }
     else {
+      //temp will be a [-1, 1] normal distribution
       temp = (in[i] - mean_val) / stddev_val;
       out[i] = static_cast<uint8_t>((temp + 1.0)*127.5);
     }

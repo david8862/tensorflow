@@ -29,8 +29,8 @@ struct Settings {
   int loop_count = 1;
   float input_mean = 127.5f;
   float input_std = 127.5f;
-  string model_name = "./mobilenet_quant_v1_224.tflite";
-  string input_npy_name = "./test.npy";
+  string model_name = "./mlp-features.316-0.459-0.88.tflite";
+  string featurevec_name = "./featurevec.txt";
   string labels_file_name = "./labels.txt";
   string input_layer_type = "uint8_t";
   int number_of_threads = 4;

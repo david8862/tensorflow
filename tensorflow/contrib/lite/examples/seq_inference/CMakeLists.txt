@@ -3,11 +3,13 @@ project(seq_inference LANGUAGES CXX)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 SET(CMAKE_BUILD_TYPE "Release")
 
+SET(TENSORFLOW_BASE_DIR /home/xiaobizh/Projects/tensorflow)
+
 # specify the cross compiler
 SET(CMAKE_C_COMPILER   /opt/gcc-armv7l-meego-linux-gnueabi-2016.01_linux/cross/bin/armv7l-meego-linux-gnueabi-gcc)
 SET(CMAKE_CXX_COMPILER /opt/gcc-armv7l-meego-linux-gnueabi-2016.01_linux/cross/bin/armv7l-meego-linux-gnueabi-g++)
 
-## where is the target environment
+## where is the target environment 
 SET(CMAKE_FIND_ROOT_PATH  /opt/gcc-armv7l-meego-linux-gnueabi-2016.01_linux/cross/armv7l-meego-linux-gnueabi/sys-root/)
 SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
@@ -39,8 +41,9 @@ set(SEQ_INF_SRC
         seq_inference.cc
         featurevec_helpers.cc)
 
-include_directories("../../../../../" "../../tools/make/downloads/flatbuffers/include")
-#link_directories("../../tools/make/gen/ruby2_armv8/lib/")
-link_directories("../../tools/make/gen/bev_armv7l/lib/")
+include_directories(${TENSORFLOW_BASE_DIR} "${TENSORFLOW_BASE_DIR}/tensorflow/contrib/lite/tools/make/downloads/flatbuffers/include" )
+#link_directories("${TENSORFLOW_BASE_DIR}/tensorflow/contrib/lite/tools/make/gen/ruby2_armv8/lib/")
+link_directories("${TENSORFLOW_BASE_DIR}/tensorflow/contrib/lite/tools/make/gen/bev_armv7l/lib/")
+#link_directories("${TENSORFLOW_BASE_DIR}/tensorflow/contrib/lite/build/")
 add_executable(seq_inference ${SEQ_INF_SRC})
 target_link_libraries(seq_inference libtensorflow-lite.a -lstdc++ -lpthread -lm -ldl)
