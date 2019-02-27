@@ -63,6 +63,7 @@ CC_PREFIX :=
 # This library is the main target for this makefile. It will contain a minimal
 # runtime that can be linked in to other programs.
 LIB_NAME := libtensorflow-lite.a
+SHLIB_NAME := libtensorflow-lite.so
 
 # Benchmark static library and binary
 BENCHMARK_LIB_NAME := benchmark-lib.a
@@ -124,8 +125,15 @@ CORE_CC_EXCLUDE_SRCS += \
 tensorflow/contrib/lite/mmap_allocation.cc \
 tensorflow/contrib/lite/nnapi_delegate.cc
 endif
+
+SH_CORE_CC_EXCLUDE_SRCS := $(CORE_CC_EXCLUDE_SRCS)
+SH_CORE_CC_EXCLUDE_SRCS += \
+tensorflow/contrib/lite/mmap_allocation_disabled.cc \
+tensorflow/contrib/lite/nnapi_delegate_disabled.cc
+
 # Filter out all the excluded files.
 TF_LITE_CC_SRCS := $(filter-out $(CORE_CC_EXCLUDE_SRCS), $(CORE_CC_ALL_SRCS))
+SH_TF_LITE_CC_SRCS := $(filter-out $(SH_CORE_CC_EXCLUDE_SRCS), $(CORE_CC_ALL_SRCS))
 
 # Benchmark sources
 BENCHMARK_SRCS_DIR := tensorflow/contrib/lite/tools/benchmark
@@ -159,6 +167,7 @@ BINDIR := $(GENDIR)bin/
 LIBDIR := $(GENDIR)lib/
 
 LIB_PATH := $(LIBDIR)$(LIB_NAME)
+SHLIB_PATH := $(LIBDIR)$(SHLIB_NAME)
 BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
 BENCHMARK_BINARY := $(BINDIR)$(BENCHMARK_BINARY_NAME)
 MINIMAL_BINARY := $(BINDIR)minimal
@@ -181,6 +190,9 @@ $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SEQ_INFERENCE_SRCS))))
 LIB_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(TF_LITE_CC_SRCS))))
 
+SHLIB_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SH_TF_LITE_CC_SRCS))))
+
 BENCHMARK_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(BENCHMARK_SRCS))))
 
@@ -194,7 +206,7 @@ $(OBJDIR)%.o: %.c
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
 # The target that's compiled if there's no command-line arguments.
-all: $(LIB_PATH)  $(MINIMAL_BINARY) $(LABEL_IMAGE_BINARY) $(SEQ_INFERENCE_BINARY) $(BENCHMARK_BINARY)
+all: $(LIB_PATH) $(SHLIB_PATH) $(MINIMAL_BINARY) $(LABEL_IMAGE_BINARY) $(SEQ_INFERENCE_BINARY) $(BENCHMARK_BINARY)
 
 # The target that's compiled for micro-controllers
 micro: $(LIB_PATH)
@@ -207,6 +219,10 @@ tensorflow/contrib/lite/schema/schema_generated.h:
 $(LIB_PATH): tensorflow/contrib/lite/schema/schema_generated.h $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	$(AR) $(ARFLAGS) $(LIB_PATH) $(LIB_OBJS)
+
+$(SHLIB_PATH): $(SHLIB_OBJS)
+	#@mkdir -p $(dir $@)
+	$(CXX) -o $(SHLIB_PATH) -shared -Wl,-soname=$(SHLIB_NAME) $(LDFLAGS) $^
 
 $(MINIMAL_BINARY): $(MINIMAL_OBJS) $(LIB_PATH)
 	@mkdir -p $(dir $@)
