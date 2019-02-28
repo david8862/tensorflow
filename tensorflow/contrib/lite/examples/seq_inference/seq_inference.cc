@@ -139,7 +139,7 @@ void RunInference(Settings* s) {
   int featurevec_width = 1280;
   int featurevec_height = 10;
 
-  std::vector<double> in = read_featurevec(s->featurevec_name, &featurevec_width, &featurevec_width, s);
+  std::vector<double> in = read_featurevec(s->featurevec_name, &featurevec_width, &featurevec_height, s);
 
   int input = interpreter->inputs()[0];
   if (s->verbose) LOG(INFO) << "input: " << input << "\n";
@@ -169,7 +169,7 @@ void RunInference(Settings* s) {
     LOG(FATAL) << "input size mismatch! wanted_height: " << wanted_height
         << ", featurevec_height: " << featurevec_height
         << ", wanted_width: " << wanted_width
-        << ", featurevec_width: " << featurevec_width;
+        << ", featurevec_width: " << featurevec_width << "\n";
     exit(-1);
   }
 
