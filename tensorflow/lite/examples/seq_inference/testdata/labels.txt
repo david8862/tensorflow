@@ -1,0 +1,5 @@
+bedRoom
+diningRoom
+kitchen
+livingRoom
+restroom

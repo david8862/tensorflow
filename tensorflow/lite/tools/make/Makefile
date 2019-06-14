@@ -39,6 +39,8 @@ INCLUDES := \
 -I$(MAKEFILE_DIR)/downloads/neon_2_sse \
 -I$(MAKEFILE_DIR)/downloads/farmhash/src \
 -I$(MAKEFILE_DIR)/downloads/flatbuffers/include \
+-I$(MAKEFILE_DIR)/downloads/googletest/googletest/include \
+-I$(MAKEFILE_DIR)/downloads/googletest/googlemock/include \
 -I$(OBJDIR)
 # This is at the end so any globally-installed frameworks like protobuf don't
 # override local versions in the source tree.
@@ -72,6 +74,7 @@ endif
 # This library is the main target for this makefile. It will contain a minimal
 # runtime that can be linked in to other programs.
 LIB_NAME := libtensorflow-lite.a
+SHLIB_NAME := libtensorflow-lite.so
 
 # Benchmark static library and binary
 BENCHMARK_LIB_NAME := benchmark-lib.a
@@ -80,6 +83,14 @@ BENCHMARK_BINARY_NAME := benchmark_model
 # A small example program that shows how to link against the library.
 MINIMAL_SRCS := \
 tensorflow/lite/examples/minimal/minimal.cc
+
+LABEL_IMAGE_SRCS := \
+tensorflow/lite/examples/label_image/label_image.cc \
+tensorflow/lite/examples/label_image/bitmap_helpers.cc
+
+SEQ_INFERENCE_SRCS := \
+tensorflow/lite/examples/seq_inference/seq_inference.cc \
+tensorflow/lite/examples/seq_inference/featurevec_helpers.cc
 
 # What sources we want to compile, must be kept in sync with the main Bazel
 # build files.
@@ -135,7 +146,9 @@ $(wildcard tensorflow/lite/*/*test.cc) \
 $(wildcard tensorflow/lite/*/*/*test.cc) \
 $(wildcard tensorflow/lite/*/*/*/*test.cc) \
 $(wildcard tensorflow/lite/kernels/*test_util.cc) \
-$(MINIMAL_SRCS)
+$(MINIMAL_SRCS) \
+$(LABEL_IMAGE_SRCS) \
+$(SEQ_INFERENCE_SRCS)
 
 BUILD_WITH_MMAP=true
 ifeq ($(BUILD_TYPE),micro)
@@ -182,6 +195,7 @@ endif
 
 # Filter out all the excluded files.
 TF_LITE_CC_SRCS := $(filter-out $(CORE_CC_EXCLUDE_SRCS), $(CORE_CC_ALL_SRCS))
+SH_TF_LITE_CC_SRCS := $(filter-out $(CORE_CC_EXCLUDE_SRCS), $(CORE_CC_ALL_SRCS))
 
 # Benchmark sources
 BENCHMARK_SRCS_DIR := tensorflow/lite/tools/benchmark
@@ -206,6 +220,8 @@ include $(wildcard $(MAKEFILE_DIR)/targets/*_makefile.inc)
 
 ALL_SRCS := \
 	$(MINIMAL_SRCS) \
+	$(LABEL_IMAGE_SRCS) \
+	$(SEQ_INFERENCE_SRCS) \
 	$(PROFILER_SRCS) \
 	$(PROFILER_SUMMARIZER_SRCS) \
 	$(TF_LITE_CC_SRCS) \
@@ -219,9 +235,12 @@ BINDIR := $(GENDIR)bin/
 LIBDIR := $(GENDIR)lib/
 
 LIB_PATH := $(LIBDIR)$(LIB_NAME)
+SHLIB_PATH := $(LIBDIR)$(SHLIB_NAME)
 BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
 BENCHMARK_BINARY := $(BINDIR)$(BENCHMARK_BINARY_NAME)
 MINIMAL_BINARY := $(BINDIR)minimal
+LABEL_IMAGE_BINARY := $(BINDIR)label_image
+SEQ_INFERENCE_BINARY := $(BINDIR)seq_inference
 
 CXX := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}g++
 CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
@@ -230,8 +249,17 @@ AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 MINIMAL_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(MINIMAL_SRCS))))
 
+LABEL_IMAGE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LABEL_IMAGE_SRCS))))
+
+SEQ_INFERENCE_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SEQ_INFERENCE_SRCS))))
+
 LIB_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(TF_LITE_CC_SRCS))))
+
+SHLIB_OBJS := $(addprefix $(OBJDIR), \
+$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SH_TF_LITE_CC_SRCS))))
 
 BENCHMARK_OBJS := $(addprefix $(OBJDIR), \
 $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(BENCHMARK_SRCS))))
@@ -246,7 +274,8 @@ $(OBJDIR)%.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # The target that's compiled if there's no command-line arguments.
-all: $(LIB_PATH)  $(MINIMAL_BINARY) $(BENCHMARK_BINARY)
+#all: $(LIB_PATH) $(SHLIB_PATH) $(MINIMAL_BINARY) $(LABEL_IMAGE_BINARY) $(SEQ_INFERENCE_BINARY) $(BENCHMARK_BINARY)
+all: $(LIB_PATH) $(SHLIB_PATH) $(MINIMAL_BINARY)
 
 # The target that's compiled for micro-controllers
 micro: $(LIB_PATH)
@@ -260,6 +289,10 @@ $(LIB_PATH): tensorflow/lite/schema/schema_generated.h $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	$(AR) $(ARFLAGS) $(LIB_PATH) $(LIB_OBJS)
 
+$(SHLIB_PATH): $(SHLIB_OBJS)
+	#@mkdir -p $(dir $@)
+	$(CXX) -o $(SHLIB_PATH) -shared -Wl,-soname=$(SHLIB_NAME) $(LDFLAGS) $^
+
 lib: $(LIB_PATH)
 
 $(MINIMAL_BINARY): $(MINIMAL_OBJS) $(LIB_PATH)
@@ -269,6 +302,18 @@ $(MINIMAL_BINARY): $(MINIMAL_OBJS) $(LIB_PATH)
 	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
 
 minimal: $(MINIMAL_BINARY)
+
+$(LABEL_IMAGE_BINARY): $(LABEL_IMAGE_OBJS) $(LIB_PATH)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) \
+	-o $(LABEL_IMAGE_BINARY) $(LABEL_IMAGE_OBJS) \
+	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
+
+$(SEQ_INFERENCE_BINARY): $(SEQ_INFERENCE_OBJS) $(LIB_PATH)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) \
+	-o $(SEQ_INFERENCE_BINARY) $(SEQ_INFERENCE_OBJS) \
+	$(LIBFLAGS) $(LIB_PATH) $(LDFLAGS) $(LIBS)
 
 $(BENCHMARK_LIB) : $(LIB_PATH) $(BENCHMARK_OBJS)
 	@mkdir -p $(dir $@)
