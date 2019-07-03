@@ -136,6 +136,7 @@ $(wildcard tensorflow/lite/kernels/internal/*.c) \
 $(wildcard tensorflow/lite/kernels/internal/optimized/*.c) \
 $(wildcard tensorflow/lite/kernels/internal/reference/*.c) \
 $(wildcard tensorflow/lite/tools/make/downloads/farmhash/src/farmhash.cc) \
+$(wildcard tensorflow/lite/tools/make/downloads/flatbuffers/src/util.cpp) \
 $(wildcard tensorflow/lite/tools/make/downloads/fft2d/fftsg.c)
 endif
 # Remove any duplicates.
@@ -145,6 +146,7 @@ $(wildcard tensorflow/lite/*test.cc) \
 $(wildcard tensorflow/lite/*/*test.cc) \
 $(wildcard tensorflow/lite/*/*/*test.cc) \
 $(wildcard tensorflow/lite/*/*/*/*test.cc) \
+$(wildcard tensorflow/lite/kernels/*test_main.cc) \
 $(wildcard tensorflow/lite/kernels/*test_util.cc) \
 $(MINIMAL_SRCS) \
 $(LABEL_IMAGE_SRCS) \
@@ -163,7 +165,7 @@ else
 	CORE_CC_EXCLUDE_SRCS += tensorflow/lite/mmap_allocation_disabled.cc
 endif
 
-BUILD_WITH_NNAPI=true
+BUILD_WITH_NNAPI=false
 ifeq ($(BUILD_TYPE),micro)
 	BUILD_WITH_NNAPI=false
 endif
@@ -247,25 +249,29 @@ CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
 AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 
 MINIMAL_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(MINIMAL_SRCS))))
+$(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(MINIMAL_SRCS)))))
 
 LABEL_IMAGE_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LABEL_IMAGE_SRCS))))
+$(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(LABEL_IMAGE_SRCS)))))
 
 SEQ_INFERENCE_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SEQ_INFERENCE_SRCS))))
+$(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SEQ_INFERENCE_SRCS)))))
 
 LIB_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(TF_LITE_CC_SRCS))))
+$(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(TF_LITE_CC_SRCS)))))
 
 SHLIB_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SH_TF_LITE_CC_SRCS))))
+$(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SH_TF_LITE_CC_SRCS)))))
 
 BENCHMARK_OBJS := $(addprefix $(OBJDIR), \
-$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(BENCHMARK_SRCS))))
+$(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(BENCHMARK_SRCS)))))
 
 # For normal manually-created TensorFlow Lite C++ source files.
 $(OBJDIR)%.o: %.cc
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+# For normal manually-created TensorFlow Lite C++ source files.
+$(OBJDIR)%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 # For normal manually-created TensorFlow Lite C source files.
@@ -275,7 +281,7 @@ $(OBJDIR)%.o: %.c
 
 # The target that's compiled if there's no command-line arguments.
 #all: $(LIB_PATH) $(SHLIB_PATH) $(MINIMAL_BINARY) $(LABEL_IMAGE_BINARY) $(SEQ_INFERENCE_BINARY) $(BENCHMARK_BINARY)
-all: $(LIB_PATH) $(SHLIB_PATH) $(MINIMAL_BINARY)
+all: $(LIB_PATH) $(SHLIB_PATH) $(MINIMAL_BINARY) $(LABEL_IMAGE_BINARY) $(BENCHMARK_BINARY)
 
 # The target that's compiled for micro-controllers
 micro: $(LIB_PATH)
